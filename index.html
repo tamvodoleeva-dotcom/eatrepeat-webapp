@@ -578,8 +578,8 @@ function renderApp(data){
       <div>
         <div class="hero-label">\u041a\u0430\u043b\u043e\u0440\u0438\u0438 \u0441\u0435\u0433\u043e\u0434\u043d\u044f</div>
         <div class="hero-kcal">${tk}</div>
-        <div class="hero-target">\u0438\u0437 ${data.target_calories} \u043a\u043a\u0430\u043b</div>
-        <div class="hero-badge">${goalLabel}</div>
+        <div class="hero-target" id="hero-target-val">\u0438\u0437 ${data.target_calories} \u043a\u043a\u0430\u043b</div>
+        <div class="hero-badge" id="hero-badge-val">${goalLabel}</div>
       </div>
       <div class="ring-wrap">
         ${ring(pct,'#3ecf8e')}
@@ -733,8 +733,14 @@ function toggleRecipe(i){const b=document.getElementById('recipe-'+i),a=document
 function toggleShop(i){shoppingChecked[i]=!shoppingChecked[i];const item=document.getElementById('shop-'+i),check=document.getElementById('shopcheck-'+i);if(item)item.classList.toggle('checked',shoppingChecked[i]);if(check)check.textContent=shoppingChecked[i]?'\u2705':'\u2B1C';}
 function setGoal(id){
   document.querySelectorAll('.goal-opt').forEach(el=>{el.classList.remove('active');const c=el.querySelector('.goal-check');if(c)c.remove();});
-  const sel=document.querySelector(`.goal-opt[data-id="${id}"]`);
+  const sel=document.querySelector('[data-id="'+id+'"]');
   if(sel){sel.classList.add('active');sel.insertAdjacentHTML('beforeend','<div class="goal-check">\u2713</div>');}
+  if(_gD)_gD.goal=id;
+  try{localStorage.setItem('er_goal_'+(getTelegramUserId()||'demo'),id);}catch(e){}
+  // update hero badge
+  const gl=id==='lose'?'\u2193 \u041f\u043e\u0445\u0443\u0434\u0435\u043d\u0438\u0435':id==='gain'?'\u2191 \u041d\u0430\u0431\u043e\u0440 \u043c\u0430\u0441\u0441\u044b':'= \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u0430\u043d\u0438\u0435';
+  const hb=document.getElementById('hero-badge-val');if(hb)hb.textContent=gl;
+  renderDay(_cSel||_tod());
 }
 function showTab(id,el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -905,6 +911,7 @@ function renderDay(key){
 function initCal(data){
   _gD=data;_diary=data.diary||{};
   try{const s=localStorage.getItem('er_cal_'+(getTelegramUserId()||'demo'));if(s&&+s>=800)_gD.target_calories=+s;}catch(e){}
+  try{const g=localStorage.getItem('er_goal_'+(getTelegramUserId()||'demo'));if(g)_gD.goal=g;}catch(e){}
   try{const s=localStorage.getItem('er_cal_'+(getTelegramUserId()||'demo'));if(s&&+s>=800)_gD.target_calories=+s;}catch(e){}
   const n=new Date();_cY=n.getFullYear();_cM=n.getMonth();_cSel=_tod();
   buildCal();renderDay(_cSel);
@@ -923,7 +930,12 @@ function saveCalNorm(){
   if(_gD)_gD.target_calories=v;
   try{localStorage.setItem('er_cal_'+(getTelegramUserId()||'demo'),String(v));}catch(e){}
   const w=document.getElementById('cal-edit-wrap');if(w)w.classList.remove('visible');
+  // update all displays
+  const disp=document.getElementById('cal-norm-display');if(disp)disp.textContent=v;
+  const ht=document.getElementById('hero-target-val');
+  if(ht)ht.textContent='\u0438\u0437 '+v+' \u043a\u043a\u0430\u043b';
   renderDay(_cSel||_tod());
+  if(typeof renderWeek==='function')renderWeek();
 }
 
 window.addEventListener('load',async()=>{
