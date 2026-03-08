@@ -927,13 +927,15 @@ function saveCalNorm(){
   const i=document.getElementById('cal-edit-input');const v=parseInt(i&&i.value);
   if(!v||v<800||v>5000){if(i)i.style.borderColor='var(--orange)';return;}
   if(i)i.style.borderColor='';
-  if(_gD)_gD.target_calories=v;
+  // update data first, then re-render
+  if(!_gD)return;
+  _gD.target_calories=v;
   try{localStorage.setItem('er_cal_'+(getTelegramUserId()||'demo'),String(v));}catch(e){}
+  // close edit panel
   const w=document.getElementById('cal-edit-wrap');if(w)w.classList.remove('visible');
-  // update all displays
+  // update norm display in Goal tab
   const disp=document.getElementById('cal-norm-display');if(disp)disp.textContent=v;
-  const ht=document.getElementById('hero-target-val');
-  if(ht)ht.textContent='\u0438\u0437 '+v+' \u043a\u043a\u0430\u043b';
+  // re-render Day tab (hero + rings use _gD.target_calories)
   renderDay(_cSel||_tod());
   if(typeof renderWeek==='function')renderWeek();
 }
