@@ -78,30 +78,37 @@
   /* TABS */
   .tabs {
     display: flex;
-    gap: 8px;
-    padding: 16px 20px 0;
+    gap: 4px;
+    padding: 12px 12px 0;
     overflow-x: auto;
     scrollbar-width: none;
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tab {
     flex-shrink: 0;
-    padding: 8px 18px;
-    border-radius: 50px;
-    font-size: 13px;
-    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    font-size: 10px;
+    font-weight: 700;
     cursor: pointer;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     background: transparent;
     color: var(--muted);
     transition: all 0.2s;
+    min-width: 56px;
+    letter-spacing: 0.2px;
   }
+  .tab-icon { font-size: 20px; line-height: 1; }
   .tab.active {
-    background: linear-gradient(135deg, var(--accent), #ff8e8e);
-    border-color: transparent;
-    color: white;
-    box-shadow: 0 4px 15px rgba(255,107,107,0.4);
+    background: rgba(255,107,107,0.15);
+    border-color: rgba(255,107,107,0.3);
+    color: var(--accent);
   }
+  .tab:active { transform: scale(0.93); }
 
   /* CONTENT */
   .content { padding: 16px 20px; }
@@ -582,14 +589,14 @@ function renderApp(data) {
     </div>
 
     <div class="tabs">
-      <div class="tab active" onclick="showTab('today', this)">Сегодня</div>
-      <div class="tab" onclick="showTab('week', this)">Неделя</div>
-      <div class="tab" onclick="showTab('weight', this)">Вес</div>
-      <div class="tab" onclick="showTab('goal', this)">🎯 Цель</div>
-      <div class="tab" onclick="showTab('water', this)">💧 Вода</div>
-      <div class="tab" onclick="showTab('recipes', this)">📖 Рецепты</div>
-      <div class="tab" onclick="showTab('shopping', this)">🛒 Покупки</div>
-      <div class="tab" onclick="showTab('achievements', this)">🏆 Итоги</div>
+      <div class="tab active" onclick="showTab('today', this)"><div class="tab-icon">🍽</div>День</div>
+      <div class="tab" onclick="showTab('week', this)"><div class="tab-icon">📈</div>Неделя</div>
+      <div class="tab" onclick="showTab('weight', this)"><div class="tab-icon">⚖️</div>Вес</div>
+      <div class="tab" onclick="showTab('goal', this)"><div class="tab-icon">🎯</div>Цель</div>
+      <div class="tab" onclick="showTab('water', this)"><div class="tab-icon">💧</div>Вода</div>
+      <div class="tab" onclick="showTab('recipes', this)"><div class="tab-icon">📖</div>Рецепты</div>
+      <div class="tab" onclick="showTab('shopping', this)"><div class="tab-icon">🛒</div>Список</div>
+      <div class="tab" onclick="showTab('achievements', this)"><div class="tab-icon">🏆</div>Итоги</div>
     </div>
 
     <div class="content">
@@ -811,8 +818,7 @@ function renderApp(data) {
                   </div>
                 </div>
                 <div class="recipe-body" id="recipe-${i}" style="display:none;">
-                  ${(r.text||'').replace(/
-/g,'<br>')}
+                  ${(r.text||'').replace(/\n/g,'<br>')}
                 </div>
               </div>
             `).join('')}
@@ -1066,7 +1072,6 @@ function toggleRecipe(i) {
 // ============================================================
 // СПИСОК ПОКУПОК
 // ============================================================
-let shoppingChecked = {};
 
 function toggleShopping(i) {
   shoppingChecked[i] = !shoppingChecked[i];
