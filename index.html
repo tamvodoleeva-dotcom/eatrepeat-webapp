@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Eatrepeat — Мой прогресс</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1a1a24;
+    --card2: #22223a;
+    --accent: #ff6b6b;
+    --accent2: #ffd93d;
+    --accent3: #6bcb77;
+    --accent4: #4d96ff;
+    --text: #f0f0f5;
+    --muted: #888899;
+    --border: rgba(255,255,255,0.07);
+    --radius: 20px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #ff6b6b22, #4d96ff22);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(20px);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .logo {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, #ff6b6b33, #ffd93d33);
+    border: 1px solid #ff6b6b44;
+    border-radius: 50px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .streak-badge span { color: var(--accent2); }
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    padding: 16px 20px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    padding: 8px 18px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: linear-gradient(135deg, var(--accent), #ff8e8e);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 15px rgba(255,107,107,0.4);
+  }
+
+  /* CONTENT */
+  .content { padding: 16px 20px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* TODAY CARD */
+  .today-hero {
+    background: linear-gradient(135deg, #1e1e30, #2a1a2e);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .today-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(255,107,107,0.2), transparent);
+    border-radius: 50%;
+  }
+  .kcal-label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .kcal-main {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 52px;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .kcal-target { font-size: 14px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+  .progress-wrap { margin-top: 16px; }
+  .progress-bar-bg {
+    height: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 50px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 0 12px rgba(255,107,107,0.5);
+  }
+  .progress-pct { font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600; }
+
+  /* BJU CARDS */
+  .bju-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .bju-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 12px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .bju-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .bju-card.protein::before { background: var(--accent4); }
+  .bju-card.fat::before { background: var(--accent2); }
+  .bju-card.carbs::before { background: var(--accent3); }
+  .bju-icon { font-size: 20px; margin-bottom: 4px; }
+  .bju-value {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .bju-card.protein .bju-value { color: var(--accent4); }
+  .bju-card.fat .bju-value { color: var(--accent2); }
+  .bju-card.carbs .bju-value { color: var(--accent3); }
+  .bju-name { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 600; }
+
+  /* CHART CARD */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .chart-title {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* MEALS LIST */
+  .meals-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .meals-header {
+    padding: 16px 20px 12px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+  }
+  .meal-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    gap: 12px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+  .meal-time {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    min-width: 36px;
+  }
+  .meal-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .meal-kcal {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .meal-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    flex-shrink: 0;
+  }
+
+  /* ACHIEVEMENTS */
+  .achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .achievement {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    text-align: center;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .achievement.unlocked {
+    border-color: rgba(255,217,61,0.3);
+    background: linear-gradient(135deg, #22223a, #2a2a1a);
+  }
+  .achievement.unlocked::after {
+    content: '✓';
+    position: absolute;
+    top: 8px; right: 12px;
+    font-size: 12px;
+    color: var(--accent2);
+    font-weight: 800;
+  }
+  .achievement.locked { opacity: 0.4; filter: grayscale(1); }
+  .achievement-icon { font-size: 32px; margin-bottom: 8px; }
+  .achievement-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .achievement-desc { font-size: 11px; color: var(--muted); }
+
+  /* STREAK */
+  .streak-card {
+    background: linear-gradient(135deg, #1e1a10, #2a2010);
+    border: 1px solid rgba(255,217,61,0.2);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .streak-fire { font-size: 48px; margin-bottom: 8px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+  .streak-number {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 64px;
+    color: var(--accent2);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(255,217,61,0.5);
+  }
+  .streak-text { font-size: 14px; color: var(--muted); margin-top: 4px; }
+  .streak-dots { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+  .streak-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    color: var(--muted);
+  }
+  .streak-dot.done { background: var(--accent2); border-color: var(--accent2); color: #111; }
+  .streak-dot.today { border-color: var(--accent2); color: var(--accent2); }
+
+  /* WEIGHT */
+  .weight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .weight-current {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .weight-num {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 48px;
+    color: var(--accent4);
+  }
+  .weight-unit { font-size: 18px; color: var(--muted); }
+  .weight-change { font-size: 14px; font-weight: 700; }
+  .weight-change.down { color: var(--accent3); }
+  .weight-change.up { color: var(--accent); }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 15px; font-weight: 600; }
+  .empty-sub { font-size: 13px; margin-top: 4px; }
+
+  /* LOADING */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading">
+    <div class="spinner"></div>
+    <div style="color: var(--muted); font-weight: 600;">Загружаем твои данные...</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// TELEGRAM WEBAPP INIT
+// ============================================================
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor('#0f0f13');
+  tg.setBackgroundColor('#0f0f13');
+}
+
+const API_BASE = 'http://64.188.58.90:8080';
+
+// Получаем user_id из Telegram WebApp
+function getTelegramUserId() {
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.initDataUnsafe?.user?.id) return tg.initDataUnsafe.user.id;
+  } catch(e) {}
+  // Fallback из URL
+  const params = new URLSearchParams(window.location.search);
+  return params.get('uid');
+}
+
+// Получаем данные из URL параметров (бот передаёт их при открытии)
+function getUrlData() {
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('data');
+  if (raw) {
+    try { return JSON.parse(atob(raw)); } catch(e) {}
+  }
+  return null;
+}
+
+// Загружаем данные с сервера
+async function fetchUserData(userId) {
+  try {
+    const resp = await fetch(`${API_BASE}/api/user/${userId}`);
+    const user = await resp.json();
+    if (!user || Object.keys(user).length === 0) return null;
+
+    const today = new Date().toISOString().split('T')[0];
+    const diary = user.diary || {};
+    const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    const week = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      const entries = diary[key] || [];
+      const kcal = entries.reduce((s,e) => s + (e.kcal||0), 0);
+      const p = entries.reduce((s,e) => s + (e.p||0), 0);
+      const f = entries.reduce((s,e) => s + (e.f||0), 0);
+      const c = entries.reduce((s,e) => s + (e.c||0), 0);
+      const dow = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      week.push({ label: i === 0 ? 'Сег' : dayNames[dow], kcal, p, f, c });
+    }
+
+    const todayMeals = diary[today] || [];
+
+    return {
+      name: user.name || 'друг',
+      target_calories: user.target_calories || 2000,
+      goal: user.goal || 'maintain',
+      weight: user.weight || 0,
+      weight_history: [],
+      streak: user.streak || 1,
+      streak_history: [true,true,true,true,true,true,true],
+      week,
+      today_meals: todayMeals
+    };
+  } catch(e) {
+    console.error('API error:', e);
+    return null;
+  }
+}
+
+// Демо-данные если нет реальных
+function getDemoData() {
+  const today = new Date();
+  const days = [];
+  const kcals = [1850, 2100, 1650, 2300, 1900, 2050, 1750];
+  const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days.push({
+      date: d.toISOString().split('T')[0],
+      label: i === 0 ? 'Сег' : dayNames[d.getDay() === 0 ? 6 : d.getDay() - 1],
+      kcal: kcals[6-i],
+      p: Math.round(kcals[6-i] * 0.25 / 4),
+      f: Math.round(kcals[6-i] * 0.30 / 9),
+      c: Math.round(kcals[6-i] * 0.45 / 4),
+    });
+  }
+  return {
+    name: "Тамара",
+    target_calories: 1800,
+    goal: "lose",
+    weight: 62,
+    weight_history: [65, 64.5, 63.8, 63.2, 62.7, 62.3, 62.0],
+    streak: 5,
+    streak_history: [true, true, true, true, true, false, true],
+    week: days,
+    today_meals: [
+      {time: "08:30", name: "Овсянка с ягодами", kcal: 320, p: 12, f: 6, c: 54},
+      {time: "12:45", name: "Куриный суп", kcal: 280, p: 22, f: 8, c: 24},
+      {time: "15:00", name: "Яблоко", kcal: 80, p: 0, f: 0, c: 20},
+      {time: "19:00", name: "Греческий салат с курицей", kcal: 420, p: 35, f: 18, c: 22},
+    ]
+  };
+}
+
+// ============================================================
+// RENDER APP
+// ============================================================
+function renderApp(data) {
+  const today = data.week[data.week.length - 1];
+  const todayKcal = data.today_meals.reduce((s, m) => s + m.kcal, 0);
+  const todayP = data.today_meals.reduce((s, m) => s + m.p, 0);
+  const todayF = data.today_meals.reduce((s, m) => s + m.f, 0);
+  const todayC = data.today_meals.reduce((s, m) => s + m.c, 0);
+  const pct = Math.min(Math.round(todayKcal / data.target_calories * 100), 100);
+
+  document.getElementById('app').innerHTML = `
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">🥦 Eatrepeat</div>
+        <div class="streak-badge">🔥 <span>${data.streak}</span> дней</div>
+      </div>
+      <div class="subtitle">Привет, ${data.name}! Вот твой прогресс 💪</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('today', this)">Сегодня</div>
+      <div class="tab" onclick="showTab('week', this)">Неделя</div>
+      <div class="tab" onclick="showTab('weight', this)">Вес</div>
+      <div class="tab" onclick="showTab('achievements', this)">Достижения</div>
+    </div>
+
+    <div class="content">
+
+      <!-- СЕГОДНЯ -->
+      <div class="section active" id="tab-today">
+        <div class="today-hero">
+          <div class="kcal-label">Калории сегодня</div>
+          <div class="kcal-main">${todayKcal}</div>
+          <div class="kcal-target">из ${data.target_calories} ккал · цель: ${data.goal === 'lose' ? 'похудение' : data.goal === 'gain' ? 'набор массы' : 'поддержание'}</div>
+          <div class="progress-wrap">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-pct">${pct}% от нормы</div>
+          </div>
+        </div>
+
+        <div class="bju-grid">
+          <div class="bju-card protein">
+            <div class="bju-icon">💪</div>
+            <div class="bju-value">${todayP}г</div>
+            <div class="bju-name">Белки</div>
+          </div>
+          <div class="bju-card fat">
+            <div class="bju-icon">🧈</div>
+            <div class="bju-value">${todayF}г</div>
+            <div class="bju-name">Жиры</div>
+          </div>
+          <div class="bju-card carbs">
+            <div class="bju-icon">🍞</div>
+            <div class="bju-value">${todayC}г</div>
+            <div class="bju-name">Углеводы</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">🥧 Баланс БЖУ</div>
+          <div class="chart-wrap">
+            <canvas id="bjuChart"></canvas>
+          </div>
+        </div>
+
+        <div class="meals-card">
+          <div class="meals-header">🍽 Приёмы пищи</div>
+          ${data.today_meals.length === 0 ? `
+            <div class="empty" style="padding: 30px">
+              <div class="empty-icon">🍽</div>
+              <div class="empty-text">Пока пусто</div>
+              <div class="empty-sub">Отправь фото еды боту!</div>
+            </div>
+          ` : data.today_meals.map(m => `
+            <div class="meal-item">
+              <div class="meal-dot"></div>
+              <div class="meal-time">${m.time}</div>
+              <div class="meal-name">${m.name}</div>
+              <div class="meal-kcal">${m.kcal} ккал</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- НЕДЕЛЯ -->
+      <div class="section" id="tab-week">
+        <div class="chart-card">
+          <div class="chart-title">📈 Калории за 7 дней</div>
+          <div class="chart-wrap">
+            <canvas id="weekChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">📊 БЖУ за неделю</div>
+          <div class="chart-wrap">
+            <canvas id="weekBjuChart"></canvas>
+          </div>
+        </div>
+
+        <div class="meals-card">
+          <div class="meals-header">📅 По дням</div>
+          ${data.week.map(d => {
+            const p = Math.min(Math.round(d.kcal / data.target_calories * 100), 100);
+            const color = d.kcal > data.target_calories ? '#ff6b6b' : '#6bcb77';
+            return `
+            <div class="meal-item">
+              <div class="meal-time">${d.label}</div>
+              <div style="flex:1; margin: 0 12px;">
+                <div style="height:4px; background: rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                  <div style="width:${p}%; height:100%; background:${color}; border-radius:4px;"></div>
+                </div>
+              </div>
+              <div class="meal-kcal" style="color:${color}">${d.kcal}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- ВЕС -->
+      <div class="section" id="tab-weight">
+        <div class="weight-card">
+          <div class="chart-title">⚖️ Динамика веса</div>
+          <div class="weight-current">
+            <div class="weight-num">${data.weight}</div>
+            <div class="weight-unit">кг</div>
+            ${data.weight_history.length > 1 ? `
+              <div class="weight-change ${data.weight < data.weight_history[0] ? 'down' : 'up'}">
+                ${data.weight < data.weight_history[0] ? '▼' : '▲'} ${Math.abs(data.weight - data.weight_history[0]).toFixed(1)} кг за неделю
+              </div>` : ''}
+          </div>
+          <div class="chart-wrap">
+            <canvas id="weightChart"></canvas>
+          </div>
+        </div>
+
+        ${!data.weight ? `
+          <div class="empty">
+            <div class="empty-icon">⚖️</div>
+            <div class="empty-text">Вес не указан</div>
+            <div class="empty-sub">Укажи вес в профиле бота</div>
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- ДОСТИЖЕНИЯ -->
+      <div class="section" id="tab-achievements">
+        <div class="streak-card">
+          <div class="streak-fire">🔥</div>
+          <div class="streak-number">${data.streak}</div>
+          <div class="streak-text">дней подряд следишь за питанием</div>
+          <div class="streak-dots">
+            ${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((d, i) => `
+              <div class="streak-dot ${data.streak_history[i] ? 'done' : i === new Date().getDay() - 1 ? 'today' : ''}">
+                ${data.streak_history[i] ? '✓' : d}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="achievements-grid">
+          ${[
+            {icon:'🌱', name:'Первый шаг', desc:'Первое фото еды', unlocked: data.today_meals.length > 0},
+            {icon:'📸', name:'Фотограф', desc:'10 блюд сфотографировано', unlocked: data.streak >= 3},
+            {icon:'🔥', name:'3 дня подряд', desc:'Streak 3 дня', unlocked: data.streak >= 3},
+            {icon:'⚡', name:'Неделя силы', desc:'Streak 7 дней', unlocked: data.streak >= 7},
+            {icon:'🎯', name:'В цель!', desc:'5 дней в норме калорий', unlocked: data.streak >= 5},
+            {icon:'💪', name:'Белковый герой', desc:'50г белка за день', unlocked: todayP >= 50},
+            {icon:'🥗', name:'Зелёный день', desc:'День без фастфуда', unlocked: true},
+            {icon:'🏆', name:'Месяц здоровья', desc:'Streak 30 дней', unlocked: data.streak >= 30},
+          ].map(a => `
+            <div class="achievement ${a.unlocked ? 'unlocked' : 'locked'}">
+              <div class="achievement-icon">${a.icon}</div>
+              <div class="achievement-name">${a.name}</div>
+              <div class="achievement-desc">${a.desc}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  // Анимация прогресс-бара
+  setTimeout(() => {
+    const fill = document.getElementById('progress-fill');
+    if (fill) fill.style.width = pct + '%';
+  }, 300);
+
+  // Инициализируем графики
+  initCharts(data, todayP, todayF, todayC);
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+function initCharts(data, todayP, todayF, todayC) {
+  Chart.defaults.color = '#888899';
+  Chart.defaults.font.family = 'Manrope';
+
+  // БЖУ donut
+  const bjuCtx = document.getElementById('bjuChart');
+  if (bjuCtx) {
+    new Chart(bjuCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Белки', 'Жиры', 'Углеводы'],
+        datasets: [{
+          data: [todayP * 4, todayF * 9, todayC * 4],
+          backgroundColor: ['#4d96ff', '#ffd93d', '#6bcb77'],
+          borderWidth: 0,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { padding: 16, font: { size: 12, weight: '600' }, usePointStyle: true, pointStyleWidth: 8 }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${Math.round(ctx.parsed / (todayP*4+todayF*9+todayC*4) * 100)}%`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Калории за неделю
+  const weekCtx = document.getElementById('weekChart');
+  if (weekCtx) {
+    new Chart(weekCtx, {
+      type: 'bar',
+      data: {
+        labels: data.week.map(d => d.label),
+        datasets: [{
+          label: 'Калории',
+          data: data.week.map(d => d.kcal),
+          backgroundColor: data.week.map(d =>
+            d.kcal > data.target_calories ? 'rgba(255,107,107,0.8)' : 'rgba(107,203,119,0.8)'
+          ),
+          borderRadius: 8,
+          borderSkipped: false,
+        }, {
+          label: 'Норма',
+          data: data.week.map(() => data.target_calories),
+          type: 'line',
+          borderColor: 'rgba(255,217,61,0.6)',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          fill: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { maxTicksLimit: 5 } }
+        }
+      }
+    });
+  }
+
+  // БЖУ за неделю stacked
+  const weekBjuCtx = document.getElementById('weekBjuChart');
+  if (weekBjuCtx) {
+    new Chart(weekBjuCtx, {
+      type: 'bar',
+      data: {
+        labels: data.week.map(d => d.label),
+        datasets: [
+          { label: 'Белки', data: data.week.map(d => d.p), backgroundColor: 'rgba(77,150,255,0.8)', borderRadius: 4, stack: 'bju' },
+          { label: 'Жиры', data: data.week.map(d => d.f), backgroundColor: 'rgba(255,217,61,0.8)', borderRadius: 4, stack: 'bju' },
+          { label: 'Углеводы', data: data.week.map(d => d.c), backgroundColor: 'rgba(107,203,119,0.8)', borderRadius: 4, stack: 'bju' },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', labels: { font: { size: 11 }, usePointStyle: true } } },
+        scales: {
+          x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false } },
+          y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { maxTicksLimit: 5 } }
+        }
+      }
+    });
+  }
+
+  // График веса
+  const weightCtx = document.getElementById('weightChart');
+  if (weightCtx && data.weight_history.length > 1) {
+    const weekDays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    new Chart(weightCtx, {
+      type: 'line',
+      data: {
+        labels: weekDays,
+        datasets: [{
+          label: 'Вес (кг)',
+          data: data.weight_history,
+          borderColor: '#4d96ff',
+          backgroundColor: 'rgba(77,150,255,0.1)',
+          borderWidth: 2.5,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#4d96ff',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { maxTicksLimit: 5 } }
+        }
+      }
+    });
+  }
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function showTab(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', async () => {
+  const urlData = getUrlData();
+  if (urlData) { renderApp(urlData); return; }
+  const userId = getTelegramUserId();
+  if (userId) {
+    const apiData = await fetchUserData(userId);
+    if (apiData) { renderApp(apiData); return; }
+  }
+  renderApp(getDemoData());
+});
+</script>
+</body>
+</html>
