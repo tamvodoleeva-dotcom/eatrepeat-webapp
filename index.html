@@ -878,6 +878,7 @@ function renderDay(key){
 
 function initCal(data){
   _gD=data;_diary=data.diary||{};
+  try{const s=localStorage.getItem('er_cal_'+(getTelegramUserId()||'demo'));if(s&&+s>=800)_gD.target_calories=+s;}catch(e){}
   const n=new Date();_cY=n.getFullYear();_cM=n.getMonth();_cSel=_tod();
   buildCal();renderDay(_cSel);
 }
