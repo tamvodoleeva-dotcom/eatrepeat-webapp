@@ -376,6 +376,49 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ЦЕЛЬ */
+  .goal-card { background: var(--card); border-radius: var(--radius); padding: 20px; margin: 16px 16px 12px; }
+  .goal-options { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  .goal-option { display: flex; align-items: center; gap: 14px; background: var(--card2); border-radius: 16px; padding: 16px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+  .goal-option.active { border-color: var(--accent); background: rgba(255,107,107,0.1); }
+  .goal-option-icon { font-size: 28px; }
+  .goal-option-title { font-weight: 700; font-size: 15px; }
+  .goal-option-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .goal-check { margin-left: auto; color: var(--accent); font-size: 20px; font-weight: 900; }
+
+  /* ВОДА */
+  .water-card { background: var(--card); border-radius: var(--radius); padding: 20px; margin: 16px 16px 12px; }
+  .water-circle { position: relative; width: 180px; height: 180px; margin: 20px auto; }
+  .water-svg { width: 100%; height: 100%; }
+  .water-inside { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .water-ml { font-size: 36px; font-weight: 900; color: #4d96ff; }
+  .water-unit { font-size: 14px; color: var(--muted); }
+  .water-goal { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .water-btns { display: flex; gap: 8px; justify-content: center; margin: 16px 0; }
+  .water-btn { background: rgba(77,150,255,0.15); border: 1px solid rgba(77,150,255,0.3); color: #4d96ff; border-radius: 50px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: Manrope, sans-serif; transition: all 0.2s; }
+  .water-btn:active { background: rgba(77,150,255,0.3); transform: scale(0.95); }
+  .water-glasses { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .water-glass { font-size: 24px; opacity: 0.3; transition: opacity 0.3s; }
+  .water-glass.filled { opacity: 1; }
+
+  /* РЕЦЕПТЫ */
+  .recipe-item { border-bottom: 1px solid var(--border); padding: 14px 0; cursor: pointer; }
+  .recipe-item:last-child { border-bottom: none; }
+  .recipe-header { display: flex; justify-content: space-between; align-items: center; }
+  .recipe-name { font-weight: 700; font-size: 14px; }
+  .recipe-meta { display: flex; align-items: center; gap: 8px; }
+  .recipe-arrow { color: var(--muted); font-size: 12px; transition: transform 0.2s; }
+  .recipe-body { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 10px; padding: 12px; background: var(--card2); border-radius: 12px; }
+
+  /* СПИСОК ПОКУПОК */
+  .shopping-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.2s; }
+  .shopping-item:last-child { border-bottom: none; }
+  .shopping-item.checked .shop-text { text-decoration: line-through; color: var(--muted); }
+  .shopping-item.checked { opacity: 0.6; }
+  .shop-check { font-size: 20px; }
+  .shop-text { font-size: 14px; font-weight: 500; }
+
 </style>
 </head>
 <body>
@@ -449,16 +492,30 @@ async function fetchUserData(userId) {
 
     const todayMeals = diary[today] || [];
 
+    // Вычислим streak
+    let streak = 0;
+    const now = new Date();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      if (diary[key] && diary[key].length > 0) streak++;
+      else if (i > 0) break;
+    }
+
     return {
       name: user.name || 'друг',
       target_calories: user.target_calories || 2000,
       goal: user.goal || 'maintain',
       weight: user.weight || 0,
-      weight_history: [],
-      streak: user.streak || 1,
+      weight_history: (user.weight_history || []).map(e => e.weight || e),
+      streak: streak || 1,
       streak_history: [true,true,true,true,true,true,true],
       week,
-      today_meals: todayMeals
+      today_meals: todayMeals,
+      saved_recipes: user.saved_recipes || [],
+      shopping_list: user.shopping_list || [],
+      water_today: user.water_today || 0,
     };
   } catch(e) {
     console.error('API error:', e);
@@ -505,6 +562,8 @@ function getDemoData() {
 // ============================================================
 // RENDER APP
 // ============================================================
+let shoppingChecked = {};
+
 function renderApp(data) {
   const today = data.week[data.week.length - 1];
   const todayKcal = data.today_meals.reduce((s, m) => s + m.kcal, 0);
@@ -526,7 +585,11 @@ function renderApp(data) {
       <div class="tab active" onclick="showTab('today', this)">Сегодня</div>
       <div class="tab" onclick="showTab('week', this)">Неделя</div>
       <div class="tab" onclick="showTab('weight', this)">Вес</div>
-      <div class="tab" onclick="showTab('achievements', this)">Достижения</div>
+      <div class="tab" onclick="showTab('goal', this)">🎯 Цель</div>
+      <div class="tab" onclick="showTab('water', this)">💧 Вода</div>
+      <div class="tab" onclick="showTab('recipes', this)">📖 Рецепты</div>
+      <div class="tab" onclick="showTab('shopping', this)">🛒 Покупки</div>
+      <div class="tab" onclick="showTab('achievements', this)">🏆 Итоги</div>
     </div>
 
     <div class="content">
@@ -648,6 +711,136 @@ function renderApp(data) {
             <div class="empty-sub">Укажи вес в профиле бота</div>
           </div>
         ` : ''}
+      </div>
+
+
+      <!-- ЦЕЛЬ -->
+      <div class="section" id="tab-goal">
+        <div class="goal-card">
+          <div class="chart-title">🎯 Моя цель</div>
+          <div class="goal-options">
+            ${[
+              {id:'lose', icon:'🔥', title:'Похудение', desc:'Дефицит калорий, жиросжигание'},
+              {id:'maintain', icon:'⚖️', title:'Поддержание', desc:'Баланс веса и здоровья'},
+              {id:'gain', icon:'💪', title:'Набор массы', desc:'Профицит калорий, рост мышц'},
+            ].map(g => `
+              <div class="goal-option ${(data.goal||'maintain') === g.id ? 'active' : ''}" onclick="setGoal('${g.id}')">
+                <div class="goal-option-icon">${g.icon}</div>
+                <div>
+                  <div class="goal-option-title">${g.title}</div>
+                  <div class="goal-option-desc">${g.desc}</div>
+                </div>
+                ${(data.goal||'maintain') === g.id ? '<div class="goal-check">✓</div>' : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="meals-card">
+          <div class="meals-header">📊 Норма калорий</div>
+          <div style="text-align:center; padding: 20px 0;">
+            <div style="font-size: 48px; font-weight: 900; color: var(--accent);">${data.target_calories}</div>
+            <div style="color: var(--muted); font-size: 14px; margin-top: 4px;">ккал в день</div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; padding: 0 4px;">
+            <div style="text-align:center; background: rgba(77,150,255,0.1); border-radius:12px; padding:12px;">
+              <div style="font-size:20px; font-weight:800; color:#4d96ff;">${Math.round(data.target_calories * 0.25 / 4)}г</div>
+              <div style="font-size:11px; color:var(--muted);">Белки</div>
+            </div>
+            <div style="text-align:center; background: rgba(255,217,61,0.1); border-radius:12px; padding:12px;">
+              <div style="font-size:20px; font-weight:800; color:#ffd93d;">${Math.round(data.target_calories * 0.30 / 9)}г</div>
+              <div style="font-size:11px; color:var(--muted);">Жиры</div>
+            </div>
+            <div style="text-align:center; background: rgba(107,203,119,0.1); border-radius:12px; padding:12px;">
+              <div style="font-size:20px; font-weight:800; color:#6bcb77;">${Math.round(data.target_calories * 0.45 / 4)}г</div>
+              <div style="font-size:11px; color:var(--muted);">Углеводы</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ВОДА -->
+      <div class="section" id="tab-water">
+        <div class="water-card">
+          <div class="chart-title">💧 Счётчик воды</div>
+          <div class="water-circle">
+            <svg viewBox="0 0 200 200" class="water-svg">
+              <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(77,150,255,0.15)" stroke-width="12"/>
+              <circle cx="100" cy="100" r="90" fill="none" stroke="#4d96ff" stroke-width="12"
+                stroke-dasharray="${Math.min((data.water_today||0)/2000*565, 565)} 565"
+                stroke-linecap="round" transform="rotate(-90 100 100)"
+                style="transition: stroke-dasharray 0.5s ease;"/>
+            </svg>
+            <div class="water-inside">
+              <div class="water-ml">${data.water_today || 0}</div>
+              <div class="water-unit">мл</div>
+              <div class="water-goal">из 2000 мл</div>
+            </div>
+          </div>
+          <div class="water-btns">
+            <button class="water-btn" onclick="addWater(150)">+150 мл 🥤</button>
+            <button class="water-btn" onclick="addWater(250)">+250 мл 💧</button>
+            <button class="water-btn" onclick="addWater(500)">+500 мл 🍶</button>
+          </div>
+          <div class="water-glasses">
+            ${Array.from({length:8}, (_,i) => `
+              <div class="water-glass ${(data.water_today||0) >= (i+1)*250 ? 'filled' : ''}">🥤</div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- РЕЦЕПТЫ -->
+      <div class="section" id="tab-recipes">
+        ${(data.saved_recipes||[]).length === 0 ? `
+          <div class="empty">
+            <div class="empty-icon">📖</div>
+            <div class="empty-text">Нет сохранённых рецептов</div>
+            <div class="empty-sub">Найди рецепт в боте и нажми 🔖 Сохранить</div>
+          </div>
+        ` : `
+          <div class="meals-card">
+            <div class="meals-header">📖 Мои рецепты (${(data.saved_recipes||[]).length})</div>
+            ${(data.saved_recipes||[]).map((r, i) => `
+              <div class="recipe-item" onclick="toggleRecipe(${i})">
+                <div class="recipe-header">
+                  <div class="recipe-name">${r.name || 'Рецепт ' + (i+1)}</div>
+                  <div class="recipe-meta">
+                    <span style="color:var(--muted); font-size:12px;">${r.saved_at || ''}</span>
+                    <span class="recipe-arrow" id="arrow-${i}">▼</span>
+                  </div>
+                </div>
+                <div class="recipe-body" id="recipe-${i}" style="display:none;">
+                  ${(r.text||'').replace(/
+/g,'<br>')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+
+      <!-- СПИСОК ПОКУПОК -->
+      <div class="section" id="tab-shopping">
+        ${(data.shopping_list||[]).length === 0 ? `
+          <div class="empty">
+            <div class="empty-icon">🛒</div>
+            <div class="empty-text">Список покупок пуст</div>
+            <div class="empty-sub">Получи рецепт в боте и нажми 🛒 В список</div>
+          </div>
+        ` : `
+          <div class="meals-card">
+            <div class="meals-header">🛒 Список покупок</div>
+            <div id="shopping-items">
+              ${(data.shopping_list||[]).map((item, i) => `
+                <div class="shopping-item ${shoppingChecked[i] ? 'checked' : ''}" onclick="toggleShopping(${i})" id="shop-${i}">
+                  <div class="shop-check">${shoppingChecked[i] ? '✅' : '⬜'}</div>
+                  <div class="shop-text">${item}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `}
       </div>
 
       <!-- ДОСТИЖЕНИЯ -->
@@ -832,6 +1025,70 @@ function initCharts(data, todayP, todayF, todayC) {
         }
       }
     });
+  }
+}
+
+
+// ============================================================
+// ВОДА
+// ============================================================
+let waterToday = 0;
+
+function addWater(ml) {
+  waterToday += ml;
+  // Обновляем UI
+  const mlEl = document.querySelector('.water-ml');
+  const svgCircle = document.querySelector('.water-svg circle:last-child');
+  const glasses = document.querySelectorAll('.water-glass');
+  if (mlEl) mlEl.textContent = waterToday;
+  if (svgCircle) {
+    const pct = Math.min(waterToday / 2000 * 565, 565);
+    svgCircle.setAttribute('stroke-dasharray', pct + ' 565');
+  }
+  glasses.forEach((g, i) => {
+    g.classList.toggle('filled', waterToday >= (i+1)*250);
+  });
+}
+
+// ============================================================
+// РЕЦЕПТЫ
+// ============================================================
+function toggleRecipe(i) {
+  const body = document.getElementById('recipe-' + i);
+  const arrow = document.getElementById('arrow-' + i);
+  if (body) {
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+  }
+}
+
+// ============================================================
+// СПИСОК ПОКУПОК
+// ============================================================
+let shoppingChecked = {};
+
+function toggleShopping(i) {
+  shoppingChecked[i] = !shoppingChecked[i];
+  const item = document.getElementById('shop-' + i);
+  const check = item?.querySelector('.shop-check');
+  if (item) item.classList.toggle('checked', shoppingChecked[i]);
+  if (check) check.textContent = shoppingChecked[i] ? '✅' : '⬜';
+}
+
+// ============================================================
+// ЦЕЛЬ
+// ============================================================
+function setGoal(goalId) {
+  document.querySelectorAll('.goal-option').forEach(el => {
+    el.classList.remove('active');
+    const checkEl = el.querySelector('.goal-check');
+    if (checkEl) checkEl.remove();
+  });
+  const selected = document.querySelector(`.goal-option[onclick="setGoal('${goalId}')"]`);
+  if (selected) {
+    selected.classList.add('active');
+    selected.insertAdjacentHTML('beforeend', '<div class="goal-check">✓</div>');
   }
 }
 
