@@ -350,6 +350,19 @@ body::after {
 .dur-result-val{font-family:'FuturaPT',sans-serif;font-size:22px;color:var(--green);}
 .dur-btn{width:100%;background:linear-gradient(135deg,#3ecf8e,#2db87a);border:none;border-radius:18px;padding:16px;font-family:'FuturaPT',sans-serif;font-size:15px;letter-spacing:0.07em;color:white;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(62,207,142,0.35);}
 .dur-btn:active{transform:scale(0.97);box-shadow:none;}
+
+/* Water undo + cal edit */
+.water-undo-btn{width:100%;margin-top:10px;padding:11px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:14px;color:var(--orange);font-family:'FuturaPT',sans-serif;font-size:13px;letter-spacing:0.05em;cursor:pointer;transition:all 0.18s;display:none;}
+.water-undo-btn.visible{display:block;}
+.water-undo-btn:active{background:rgba(255,107,53,0.18);}
+.cal-edit-btn{margin-top:12px;padding:10px 20px;background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.25);border-radius:50px;color:var(--green);font-family:'FuturaPT',sans-serif;font-size:12px;letter-spacing:0.05em;cursor:pointer;transition:all 0.18s;display:block;width:100%;text-align:center;}
+.cal-edit-btn:active{background:rgba(62,207,142,0.2);}
+.cal-edit-wrap{margin-top:12px;display:none;}
+.cal-edit-wrap.visible{display:block;}
+.cal-edit-row{display:flex;gap:8px;align-items:center;}
+.cal-edit-input{flex:1;padding:12px 14px;border-radius:14px;border:1.5px solid rgba(62,207,142,0.3);background:rgba(255,255,255,0.6);font-family:'FuturaPT',sans-serif;font-size:16px;color:var(--text);outline:none;-webkit-appearance:none;}
+.cal-edit-input:focus{border-color:var(--green);}
+.cal-save-btn{padding:12px 18px;background:var(--green);border:none;border-radius:14px;color:white;font-family:'FuturaPT',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -613,6 +626,14 @@ function renderApp(data){
         <div class="calorie-norm-num">${data.target_calories}</div>
         <div style="color:var(--muted);font-size:12px;margin-top:4px;letter-spacing:0.08em">\u041a\u041a\u0410\u041b \u0412 \u0414\u0415\u041d\u042c</div>
       </div>
+      <button class="cal-edit-btn" onclick="toggleCalEdit()">\u270F\uFE0F \u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u043d\u043e\u0440\u043c\u0443</button>
+      <div class="cal-edit-wrap" id="cal-edit-wrap">
+        <div class="cal-edit-row">
+          <input class="cal-edit-input" type="number" id="cal-edit-input" placeholder="1800" min="800" max="5000">
+          <button class="cal-save-btn" onclick="saveCalNorm()">\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u0442\u0441\u044f \u043d\u0430 \u044d\u0442\u043e\u043c \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0435</div>
+      </div>
       <div class="macro-norm-grid">
         <div class="macro-norm-item"><div class="macro-norm-val" style="color:#4a7cdc">${tP}\u0433</div><div class="macro-norm-label">\u0411\u0435\u043b\u043a\u0438</div></div>
         <div class="macro-norm-item"><div class="macro-norm-val" style="color:#f59e0b">${tF}\u0433</div><div class="macro-norm-label">\u0416\u0438\u0440\u044b</div></div>
@@ -644,6 +665,7 @@ function renderApp(data){
         <button class="water-btn" onclick="addWater(250)">+250 \u043c\u043b</button>
         <button class="water-btn" onclick="addWater(500)">+500 \u043c\u043b</button>
       </div>
+      <button class="water-undo-btn" id="water-undo" onclick="undoWater()">\u2190 \u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0435\u0435</button>
       <div class="water-glasses">
         ${Array.from({length:8},(_,i)=>`<div class="water-glass ${(data.water_today||0)>=(i+1)*250?'filled':''}" id="glass-${i}">\uD83D\uDCA7</div>`).join('')}
       </div>
@@ -695,14 +717,18 @@ function renderApp(data){
   if(wtCtx&&data.weight_history.length>1)new Chart(wtCtx,{type:'line',data:{labels:data.weight_history.map((_,i)=>(data.weight_history.length-i)+'\u0434').reverse(),datasets:[{data:data.weight_history,borderColor:'#4a7cdc',backgroundColor:'rgba(74,124,220,0.07)',borderWidth:2.5,fill:true,tension:0.4,pointBackgroundColor:'#4a7cdc',pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},border:{display:false}},y:{grid:{color:'rgba(0,0,0,0.04)'},border:{display:false},ticks:{maxTicksLimit:4}}}}});
 }
 
-function addWater(ml){
-  waterAmount+=ml;
-  const el=document.getElementById('water-ml'),r=document.getElementById('water-ring'),lbl=document.getElementById('water-label');
+let _wHist=[];
+function _refreshWater(){
+  const el=document.getElementById('water-ml'),r=document.getElementById('water-ring'),
+        lbl=document.getElementById('water-label'),ub=document.getElementById('water-undo');
   if(el)el.textContent=waterAmount;
   if(lbl)lbl.textContent=waterAmount+' \u0438\u0437 2000 \u043c\u043b';
   if(r)r.setAttribute('stroke-dasharray',Math.min(waterAmount/2000*465,465).toFixed(1)+' 465');
   for(let i=0;i<8;i++){const g=document.getElementById('glass-'+i);if(g)g.classList.toggle('filled',waterAmount>=(i+1)*250);}
+  if(ub)ub.classList.toggle('visible',_wHist.length>0);
 }
+function addWater(ml){_wHist.push(waterAmount);waterAmount=Math.max(0,waterAmount+ml);_refreshWater();}
+function undoWater(){if(_wHist.length){waterAmount=_wHist.pop();_refreshWater();}}
 function toggleRecipe(i){const b=document.getElementById('recipe-'+i),a=document.getElementById('arrow-'+i);if(b){const o=b.style.display==='block';b.style.display=o?'none':'block';if(a)a.style.transform=o?'':'rotate(180deg)';}}
 function toggleShop(i){shoppingChecked[i]=!shoppingChecked[i];const item=document.getElementById('shop-'+i),check=document.getElementById('shopcheck-'+i);if(item)item.classList.toggle('checked',shoppingChecked[i]);if(check)check.textContent=shoppingChecked[i]?'\u2705':'\u2B1C';}
 function setGoal(id){
@@ -879,10 +905,26 @@ function renderDay(key){
 function initCal(data){
   _gD=data;_diary=data.diary||{};
   try{const s=localStorage.getItem('er_cal_'+(getTelegramUserId()||'demo'));if(s&&+s>=800)_gD.target_calories=+s;}catch(e){}
+  try{const s=localStorage.getItem('er_cal_'+(getTelegramUserId()||'demo'));if(s&&+s>=800)_gD.target_calories=+s;}catch(e){}
   const n=new Date();_cY=n.getFullYear();_cM=n.getMonth();_cSel=_tod();
   buildCal();renderDay(_cSel);
 }
 
+
+function toggleCalEdit(){
+  const w=document.getElementById('cal-edit-wrap');
+  if(!w)return;const vis=w.classList.toggle('visible');
+  if(vis&&_gD){const i=document.getElementById('cal-edit-input');if(i)i.value=_gD.target_calories;}
+}
+function saveCalNorm(){
+  const i=document.getElementById('cal-edit-input');const v=parseInt(i&&i.value);
+  if(!v||v<800||v>5000){if(i)i.style.borderColor='var(--orange)';return;}
+  if(i)i.style.borderColor='';
+  if(_gD)_gD.target_calories=v;
+  try{localStorage.setItem('er_cal_'+(getTelegramUserId()||'demo'),String(v));}catch(e){}
+  const w=document.getElementById('cal-edit-wrap');if(w)w.classList.remove('visible');
+  renderDay(_cSel||_tod());
+}
 
 window.addEventListener('load',async()=>{
   const uid=getTelegramUserId();
